@@ -1,5 +1,5 @@
 //
-// Created by mlgsk on 21.01.2023.
+// Created by Malgorzata Kozlowska on 21.01.2023.
 //
 
 #ifndef LAB_6_FILE_SYSTEM_FILESYSTEM_H
@@ -17,39 +17,54 @@ struct FileSystemData {
 };
 
 /*Block data*/
-enum memoryBlockType { available, usedNext, usedFirst };
+enum memoryBlockType { available, usedNext, usedStart };
 
 
 struct inode {
-    unsigned int flag;
+    unsigned int inodeStatus;
     size_t size;
     char name[FILENAME_SIZE];
-    int next_inode;
+    int nextInode;
 };
-/*Only using when program is running*/
+
+
 struct FileSystem {
     struct FileSystemData fileSystemData;
     FILE * file;
     struct inode * inodesList;
-    int inode_num;
+    int inodeQuantity;
 };
 
-/* Function needed */
-struct FileSystem* createFileSystem(size_t chosenFileSystemSize);  /* Creates Virtual Disk */
-void uploadFileToFileSystem(struct FileSystem* ourFileSystem, const char* fileName);  /*Add File to Virtual Disk */
-void copyFileFromVFS(struct FileSystem* myFileSystem, const char*, const char* fileToExport);  /* Copy file from Virtual Disk to minix disk */
-void removeFileFromVFS(struct FileSystem* myFileSystem, const char* fileToDelete);  /* Remove file from Virtual Disk */
-void destroyVFS();  /* Delete virtual disk */
-void listFiles(struct FileSystem* myFileSystem);  /* !Shows file */
-void diskStatistics(struct FileSystem* myFileSystem);  /*  !Shows virtual disk statistics */
 
-/*Help function*/
-struct FileSystem* openFileSystem();  /* Open virtual disk */
-void saveChangesAndCloseFileSystem(struct FileSystem* ourFileSystem);  /* Close Virtual disk */
-unsigned int calculateNumberOfInodes(size_t fileSystemSize);  /*Gets how manny inodes and blocks we can allocate*/
-void closeWithoutSaving(struct FileSystem* ourFileSystem);  /**/
-unsigned int getReqInodes(size_t);  /**/
-unsigned int getBlockOffset(unsigned int, unsigned int); /**/
+/* Creating & deleting file system */
+struct FileSystem* createFileSystem(size_t chosenFileSystemSize);
+void deleteFileSystem();
+
+/* Copying */
+void copyFileToFileSystem(struct FileSystem* ourFileSystem, const char* fileName);
+void copyFileFromFileSystem(struct FileSystem* ourFileSystem, const char *fileName, const char* fileNameOutsideFileSystem);
+
+/*Deleting */
+void deleteFileFromFileSystem(struct FileSystem* ourFileSystem, const char* fileName);
+
+/* Graphic representation */
+void listFiles(struct FileSystem* myFileSystem);
+void fileSystemStatistics(struct FileSystem* ourFileSystem);
+
+
+/* Helper functions */
+
+/* Opening file system */
+struct FileSystem* openFileSystem();
+
+/* Closing file system */
+void saveChangesAndCloseFileSystem(struct FileSystem* ourFileSystem);
+void closeFileSystemWithoutSaving(struct FileSystem* ourFileSystem);
+
+/* Necessary calculations */
+unsigned int calculateNumberOfInodes(size_t fileSystemSize);
+unsigned int calculateRequiredNumberOfMemoryBlocks(size_t fileSize);
+unsigned int getBlockOffset(unsigned int, unsigned int);
 
 
 

@@ -1,5 +1,5 @@
 //
-// Created by Małgorzata Kozłowska on 21.01.2023.
+// Created by Malgorzata Kozlowska on 21.01.2023.
 //
 
 #include <string.h>
@@ -9,7 +9,7 @@
 #include <errno.h>
 
 
-const char * fileSystemName = "FileSystem";
+const char * fileSystemName = "FileSystem";  // our File System name
 
 
 struct FileSystem * createFileSystem(size_t chosenFileSystemSize)
@@ -24,8 +24,7 @@ struct FileSystem * createFileSystem(size_t chosenFileSystemSize)
     if (sizeof(struct FileSystemData) > chosenFileSystemSize)
     {
         free(fileSystem);
-        errno=ENOMEM;
-        perror("ERROR: Przyznano za mało pamięci do utworzenia systemu plików.\n");
+        printf("ERROR: Przyznano za malo pamieci do utworzenia systemu plikow.\n");
         exit(-1);
     }
 
@@ -35,8 +34,7 @@ struct FileSystem * createFileSystem(size_t chosenFileSystemSize)
     if (!fileSystem->file)
     {
         free(fileSystem);
-        errno=ENOEXEC;
-        perror("ERROR: System plików nie został poprawnie utworzony.\n");
+        printf("ERROR: System plikow nie zostal poprawnie utworzony.\n");
         exit(-1);
     }
 
@@ -53,20 +51,20 @@ struct FileSystem * createFileSystem(size_t chosenFileSystemSize)
     fileSystem->fileSystemData.fileNumber = 0;
 
     /* Calculate and set the number of inodes in our File System */
-    fileSystem->inode_num = calculateNumberOfInodes(chosenFileSystemSize);
+    fileSystem->inodeQuantity = calculateNumberOfInodes(chosenFileSystemSize);
 
     /* Calculate and set the size of the memory for data */
-    fileSystem->fileSystemData.freeSize = fileSystem->inode_num * BLOCK_SIZE;
+    fileSystem->fileSystemData.freeSize = fileSystem->inodeQuantity * BLOCK_SIZE;
 
     /* Allocate memory and set status for inodes */
-    fileSystem->inodesList = malloc(sizeof(struct inode) * fileSystem->inode_num);
-    for (iterator = 0; iterator < fileSystem->inode_num; ++iterator)
+    fileSystem->inodesList = malloc(sizeof(struct inode) * fileSystem->inodeQuantity);
+    for (iterator = 0; iterator < fileSystem->inodeQuantity; ++iterator)
     {
-        fileSystem->inodesList[iterator].flag = available;
+        fileSystem->inodesList[iterator].inodeStatus = available;
     }
 
-    /* Inform user of Success*/
-    printf("Pomyslnie utworzono dysk FileSystem\n");
+    /* File System has been created successfully */
+    printf("Utworzono system plikow.\n");
 
     /* Save changes and close File System*/
     saveChangesAndCloseFileSystem(fileSystem);
@@ -77,11 +75,16 @@ struct FileSystem * createFileSystem(size_t chosenFileSystemSize)
 
 void saveChangesAndCloseFileSystem(struct FileSystem* ourFileSystem)
 {
+    /* Set the cursor at the beginning of the File System */
     fseek(ourFileSystem->file, 0, SEEK_SET);
+    /* Save changes */
     fwrite(&ourFileSystem->fileSystemData, sizeof(struct FileSystemData), 1, ourFileSystem->file);
-    fwrite(ourFileSystem->inodesList, sizeof(struct inode), ourFileSystem->inode_num, ourFileSystem->file);
+    fwrite(ourFileSystem->inodesList, sizeof(struct inode), ourFileSystem->inodeQuantity, ourFileSystem->file);
 
+    /* Close File System*/
     fclose(ourFileSystem->file);
+
+    /* Free used memory */
     free(ourFileSystem->inodesList);
     free(ourFileSystem);
     ourFileSystem = NULL;
@@ -90,11 +93,14 @@ void saveChangesAndCloseFileSystem(struct FileSystem* ourFileSystem)
 
 
 
-void closeWithoutSaving(struct FileSystem* ourFileSystem)
+void closeFileSystemWithoutSaving(struct FileSystem* ourFileSystem)
 {
     if (ourFileSystem -> file)
     {
+        /* Close File System*/
         fclose(ourFileSystem->file);
+
+        /* Free used memory */
         free(ourFileSystem->inodesList);
     }
     free(ourFileSystem);
@@ -106,226 +112,283 @@ void closeWithoutSaving(struct FileSystem* ourFileSystem)
 struct FileSystem* openFileSystem()
 {
     struct FileSystem *ourFileSystem;
+
+    /* Allocate data for our File System */
     ourFileSystem = malloc(sizeof(struct FileSystem));
 
+    /* Try to open File System */
     ourFileSystem->file=fopen(fileSystemName, "r+b");
     if (!ourFileSystem->file)
     {
-        closeWithoutSaving(ourFileSystem);
-        perror("ERROR: Blad przy probie otwarcia pliku.\n");
+        closeFileSystemWithoutSaving(ourFileSystem);
+        printf("ERROR: Otwarcie systemu plikow nie powiodlo sie.\n");
         exit(-1);
     }
-    fseek(ourFileSystem->file, 0, SEEK_END);
+//    fseek(ourFileSystem->file, 0, SEEK_END);
 
+    /* Set cursor at the begging of the File System */
     fseek(ourFileSystem->file, 0, SEEK_SET);
+
+    /* Try to read the File System */
     if (fread(&ourFileSystem->fileSystemData, sizeof(struct FileSystemData), 1, ourFileSystem->file) <= 0)
     {
-        perror("ERROR: Blad przy wczytaniu informacji o dysku.\n");
-        closeWithoutSaving(ourFileSystem);
+        printf("ERROR: Wczytanie danych z systemu plikow nie powiodlo sie.\n");
+        closeFileSystemWithoutSaving(ourFileSystem);
         exit(-1);
     }
-    ourFileSystem->inode_num = calculateNumberOfInodes(ourFileSystem->fileSystemData.size);
-    ourFileSystem->inodesList = malloc(sizeof(struct inode) * ourFileSystem->inode_num);
-    /*Reading inodes*/
-    if (fread(ourFileSystem->inodesList, sizeof(struct inode), ourFileSystem->inode_num, ourFileSystem->file) <= 0)
+
+    /* Calculate and set the number of inodes in our File System */
+    ourFileSystem->inodeQuantity = calculateNumberOfInodes(ourFileSystem->fileSystemData.size);
+
+    /* Allocate memory for inodes */
+    ourFileSystem->inodesList = malloc(sizeof(struct inode) * ourFileSystem->inodeQuantity);
+
+    /* Try to read inodes*/
+    if (fread(ourFileSystem->inodesList, sizeof(struct inode), ourFileSystem->inodeQuantity, ourFileSystem->file) <= 0)
     {
-        perror("ERROR: przy wczytywaniu INODE.\n");
-        closeWithoutSaving(ourFileSystem);
+        printf("ERROR: Wczytanie danych inodow nie powiodlo sie.\n");
+        closeFileSystemWithoutSaving(ourFileSystem);
         exit(-1);
     }
+
+    /* File System has been opened successfully */
     return ourFileSystem;
 }
 
 
 
-void uploadFileToFileSystem(struct FileSystem *ourFileSystem, const char* fileName)
+void copyFileToFileSystem(struct FileSystem *ourFileSystem, const char* fileName)
 {
+    /* Initialize variables for the file */
     FILE *newFile;
     size_t newFileSize;
     char buffer[BLOCK_SIZE];
-    unsigned int requiredNodes, i, j;
-    unsigned int *freeNodesList;
+    unsigned int requiredMemoryBlocks, i, j;
+    unsigned int *freeMemoryBlocks;
 
-    for (i = 0; i < ourFileSystem->inode_num; i++)
+    /* Check if there exists a file with the same name*/
+    for (i = 0; i < ourFileSystem->inodeQuantity; i++)
     {
-        if(ourFileSystem->inodesList[i].flag == usedFirst)
+        if(ourFileSystem->inodesList[i].inodeStatus == usedStart)
         {
             if (strcmp(fileName, ourFileSystem->inodesList[i].name) == 0)
             {
-                perror("ERROR: Istnieje juz plik o takiej nazwie.");
-                closeWithoutSaving(ourFileSystem);
+                printf("ERROR: W systemie plikow istnieje plik o podanej nazwie : %s.\n", fileName);
+                closeFileSystemWithoutSaving(ourFileSystem);
                 exit(-1);
             }
         }
     }
 
+    /* Try to open the provided file */
     newFile = fopen(fileName, "rb");
     if (!newFile)
     {
-        errno = 1;
-        perror("ERROR: Blad przy probie otwarcia pliku\n");
-        closeWithoutSaving(ourFileSystem);
+        printf("ERROR: Otwarcie pliku nie powiodlo się.\n");
+        closeFileSystemWithoutSaving(ourFileSystem);
         exit(-1);
     }
+    /* Get the size of the file that will be uploaded */
     fseek(newFile, 0, SEEK_END);
     newFileSize = ftell(newFile);
+
+    /* Check if there is enough size for the provided file */
     if (ourFileSystem->fileSystemData.freeSize < newFileSize)
     {
         errno = ENOMEM;
-        perror("ERROR: Brak wolnej pamieci na dysku");
-        closeWithoutSaving(ourFileSystem);
+        printf("ERROR: System plikow nie dysponuje odpowiednia iloscia pamieci.");
+        closeFileSystemWithoutSaving(ourFileSystem);
         exit(-1);
     }
-    requiredNodes = getReqInodes(newFileSize);
-    freeNodesList = malloc(requiredNodes * sizeof(unsigned int));
-    for (i = 0, j = 0; i < ourFileSystem->inode_num, j < requiredNodes; i++)
+
+
+    requiredMemoryBlocks = calculateRequiredNumberOfMemoryBlocks(newFileSize);
+    freeMemoryBlocks = malloc(requiredMemoryBlocks * sizeof(unsigned int));
+    /* Assign memory blocks for the file that is to be uploaded */
+    for (i = 0, j = 0; j < requiredMemoryBlocks; i++)
     {
-        if (ourFileSystem->inodesList[i].flag == available)
+        if (ourFileSystem->inodesList[i].inodeStatus == available)
         {
-            freeNodesList[j] = i;
+            /* Save the position (id) of the memory block that can be used */
+            freeMemoryBlocks[j] = i;
             j++;
-            if (j == requiredNodes) break;
+            /* If the necessary quantity of the free memory blocks has been found - end loop */
+            if (j == requiredMemoryBlocks) break;
         }
     }
-    if (j != requiredNodes)
+    /* Could not find the necessary quantity of the memory blocks for the file. */
+    if (j != requiredMemoryBlocks)
     {
-        perror("ERROR: Nie znaleziono odpowiedniej ilosci wolnych blokow.\n");
-        free(freeNodesList);
-        closeWithoutSaving(ourFileSystem);
+        printf("ERROR: W systemie plikow nie zostala znaleziona odpowiednia liczba wolnych bloklw pamieci na zapis pliku.\n");
+        free(freeMemoryBlocks);
+        closeFileSystemWithoutSaving(ourFileSystem);
         fclose(newFile);
         exit(-1);
     }
+    /* Save file to our File System */
+    /* Set cursor at the beginning od the file */
     fseek(newFile, 0, SEEK_SET);
-    for (i = 0; i < requiredNodes; i++)
+    for (i = 0; i < requiredMemoryBlocks; i++)
     {
-        /*FLAG*/
+        /* Set statuses for the memory blocks */
         if (i == 0)
-            ourFileSystem->inodesList[freeNodesList[i]].flag = usedFirst;
+            ourFileSystem->inodesList[freeMemoryBlocks[i]].inodeStatus = usedStart;
         else
-            ourFileSystem->inodesList[freeNodesList[i]].flag = usedNext;
+            ourFileSystem->inodesList[freeMemoryBlocks[i]].inodeStatus = usedNext;
 
-        /*Name*/
-        strncpy(ourFileSystem->inodesList[freeNodesList[i]].name, fileName, FILENAME_SIZE);
+        /* Copy and set file name to our File System */
+        strncpy(ourFileSystem->inodesList[freeMemoryBlocks[i]].name, fileName, FILENAME_SIZE);
 
-        /*File Size*/
-        if (i != requiredNodes - 1)
-            ourFileSystem->inodesList[freeNodesList[i]].size = BLOCK_SIZE;
+        /* Set memory blocks*/
+        /* Fill the whole memory block (if it is not the final one) */
+        if (i != requiredMemoryBlocks - 1)
+            ourFileSystem->inodesList[freeMemoryBlocks[i]].size = BLOCK_SIZE;
         else
         {
+            /* Check if the file size is a multiple of the memory block size */
             if (!(newFileSize % BLOCK_SIZE))
-                ourFileSystem->inodesList[freeNodesList[i]].size = BLOCK_SIZE;
+                ourFileSystem->inodesList[freeMemoryBlocks[i]].size = BLOCK_SIZE;
             else
-                ourFileSystem->inodesList[freeNodesList[i]].size = newFileSize % BLOCK_SIZE;
+                /* Set size to the reminder of the division */
+                ourFileSystem->inodesList[freeMemoryBlocks[i]].size = newFileSize % BLOCK_SIZE;
         }
-        /*Next INODE*/
-        if (i < requiredNodes - 1)
-            ourFileSystem->inodesList[freeNodesList[i]].next_inode = freeNodesList[i + 1];
+        /*Next Inode*/
+        if (i < requiredMemoryBlocks - 1)
+            ourFileSystem->inodesList[freeMemoryBlocks[i]].nextInode = freeMemoryBlocks[i + 1];
         else
-            ourFileSystem->inodesList[freeNodesList[i]].next_inode = -1;
+            ourFileSystem->inodesList[freeMemoryBlocks[i]].nextInode = -1;
 
         /*Copy from file to virtual disk*/
-        fseek(ourFileSystem->file, getBlockOffset(freeNodesList[i], ourFileSystem->inode_num), SEEK_SET);
+        fseek(ourFileSystem->file, getBlockOffset(freeMemoryBlocks[i], ourFileSystem->inodeQuantity), SEEK_SET);
         fread(buffer, 1, sizeof(buffer), newFile);
-        fwrite(buffer, 1, ourFileSystem->inodesList[freeNodesList[i]].size, ourFileSystem->file);
+        fwrite(buffer, 1, ourFileSystem->inodesList[freeMemoryBlocks[i]].size, ourFileSystem->file);
     }
+
+    /* Decrement File System size after uploading the provided file */
+    ourFileSystem->fileSystemData.freeSize -= requiredMemoryBlocks * BLOCK_SIZE;
+
+    /* Increment number of files the File System stores */
     ourFileSystem->fileSystemData.fileNumber +=1;
-    ourFileSystem->fileSystemData.freeSize -= requiredNodes * BLOCK_SIZE;
-    free(freeNodesList);
+
+    free(freeMemoryBlocks);
+
+    /* Close the file that has been copied to our File System */
     fclose(newFile);
     saveChangesAndCloseFileSystem(ourFileSystem);
-    printf("Pomyslnie przekopiowano plik %s na dysk FileSystem.\n", fileName);
+    printf("Plik o nazwie %s zostal skopiowany do systemu plikow.\n", fileName);
 }
 
 
 
-void copyFileFromVFS(struct FileSystem* v, const char* fname, const char* newname)
+void copyFileFromFileSystem(struct FileSystem* ourFileSystem, const char* fileName, const char* fileNameOutsideFileSystem)
 {
-    FILE * new_file;
+    /* Initialize variables for the file */
+    FILE * newFile;
     char buffer[BLOCK_SIZE];
-    unsigned int i, first_node;
+    unsigned int i, firstNode;
     int found = 0;
 
-
-    for (i = 0; i < v->inode_num; i++)
+    /* Try to find the first memory block of the provided file */
+    for (i = 0; i < ourFileSystem->inodeQuantity; i++)
     {
-        if (v->inodesList[i].flag == usedFirst && strncmp(v->inodesList[i].name, fname, FILENAME_SIZE) == 0)
+        if (ourFileSystem->inodesList[i].inodeStatus == usedStart && strncmp(ourFileSystem->inodesList[i].name, fileName, FILENAME_SIZE) == 0)
         {
-            first_node = i;
+            firstNode = i;
             found = 1;
             break;
         }
     }
+    /* Could not find the file data with the provided name */
     if (found==0)
     {
-        perror("ERROR: Nie znaleziono pliku na dysku FileSystem.\n");
-        closeWithoutSaving(v);
+        printf("ERROR: Plik o nazwie %s nie zostal znaleziony w systemie plikow.\n", fileName);
+        closeFileSystemWithoutSaving(ourFileSystem);
         exit(-1);
     }
-    new_file = fopen(newname, "wb");
-    if (!new_file)
+
+    /* Try to open the new file with the provided new name */
+    newFile = fopen(fileNameOutsideFileSystem, "wb");
+    if (!newFile)
     {
-        perror("ERROR: Blad przy probie otworzenia pliku do zapisu.\n");
-        closeWithoutSaving(v);
+        printf("ERROR: Otworzenie pliku do zapisu o nazwie %s nie powiodlo sie.\n", fileName);
+        closeFileSystemWithoutSaving(ourFileSystem);
         exit(-1);
     }
+
+    /* Copy the data of the given file to the file outside of our File System */
     while (1)
     {
-        fseek(v->file, getBlockOffset(first_node, v->inode_num), SEEK_SET);
-        fread(buffer, 1, v->inodesList[first_node].size, v->file);
-        fwrite(buffer, 1, v->inodesList[first_node].size, new_file);
-        if (v->inodesList[first_node].next_inode == -1) break;
-        first_node = v->inodesList[first_node].next_inode;
+        fseek(ourFileSystem->file, getBlockOffset(firstNode, ourFileSystem->inodeQuantity), SEEK_SET);
+        fread(buffer, 1, ourFileSystem->inodesList[firstNode].size, ourFileSystem->file);
+        fwrite(buffer, 1, ourFileSystem->inodesList[firstNode].size, newFile);
+        if (ourFileSystem->inodesList[firstNode].nextInode == -1) break;
+        firstNode = ourFileSystem->inodesList[firstNode].nextInode;
     }
-    fclose(new_file);
-    closeWithoutSaving(v);
-    printf("Pomyslnie przekopiowano plik %s z dysku FileSystem\n.", fname);
+
+    /* Close newly created file */
+    fclose(newFile);
+
+    /* Close our File System */
+    closeFileSystemWithoutSaving(ourFileSystem);
+    printf("Plik o nazwie %s został wyeksportowany na zewnatrz system plikow\n.", fileName);
 }
 
 
 
-void removeFileFromVFS(struct FileSystem* v, const char* fname)
+void deleteFileFromFileSystem(struct FileSystem* ourFileSystem, const char* fileName)
 {
-    int current_inode, i, blocks;
-    current_inode = -1;
-    for (i = 0; i < v->inode_num; i++)
+    int currentInode, i, blocks;
+    currentInode = -1;
+
+    /* Find the starting memory block of the file that will be deleted */
+    for (i = 0; i < ourFileSystem->inodeQuantity; i++)
     {
-        if (v->inodesList[i].flag == usedFirst)
+        if (ourFileSystem->inodesList[i].inodeStatus == usedStart)
         {
-            if (strncmp(v->inodesList[i].name, fname, FILENAME_SIZE) == 0)
+            if (strncmp(ourFileSystem->inodesList[i].name, fileName, FILENAME_SIZE) == 0)
             {
-                current_inode = i;
+                currentInode = i;
                 break;
             }
         }
     }
-    if (current_inode == -1)
+
+    /* Could not find the file with the provided name in our File System */
+    if (currentInode == -1)
     {
-        perror("ERROR: Nie znaleziono pliku na dysku FileSystem\n");
-        closeWithoutSaving(v);
+        printf("ERROR: Plik o nazwie %s nie zostal znaleziony w systemie plikow\n", fileName);
+        closeFileSystemWithoutSaving(ourFileSystem);
         exit(-1);
     }
 
     blocks = 0;
+
+    /* Set memory block status to available again */
     while (1)
     {
-        v->inodesList[current_inode].flag = available;
+        ourFileSystem->inodesList[currentInode].inodeStatus = available;
         blocks++;
-        if (v->inodesList[current_inode].next_inode != -1)
+        if (ourFileSystem->inodesList[currentInode].nextInode != -1)
         {
-            current_inode = v->inodesList[current_inode].next_inode;
+            currentInode = ourFileSystem->inodesList[currentInode].nextInode;
         }
         else break;
     }
-    v->fileSystemData.freeSize += blocks * BLOCK_SIZE;
-    v->fileSystemData.fileNumber -= 1;
-    saveChangesAndCloseFileSystem(v);
-    printf("Pomyslnie usunieto plik %s z dysku FileSystem\n",fname);
+
+    /* Increment number of available (free) files to the ones that have been earlier used by the deleted file */
+    ourFileSystem->fileSystemData.freeSize += blocks * BLOCK_SIZE;
+
+    /* Decrement number of files */
+    ourFileSystem->fileSystemData.fileNumber -= 1;
+    saveChangesAndCloseFileSystem(ourFileSystem);
+    printf("Plik o nazwie %s zostal usuniety z systemu plikow.\n", fileName);
 }
 
 
 
-void destroyVFS()
+void deleteFileSystem()
 {
+    /* The name of the file system is deleted - it cannot be accessed therefore it is logically deleted */
     unlink(fileSystemName);
 }
 
@@ -338,23 +401,24 @@ unsigned int calculateNumberOfInodes(size_t fileSystemSize)
 
 
 
-unsigned int getReqInodes(size_t size)
+unsigned int calculateRequiredNumberOfMemoryBlocks(size_t fileSize)
 {
-    size_t size_left = size;
-    unsigned int req = 0;
+    size_t sizeLeft = fileSize;
+    unsigned int requiredNumberOfBlocks = 0;
 
+    /* Find number of the needed memory blocks */
     while (1)
     {
-        req++;
-        if (size_left <= BLOCK_SIZE) break;
-        if (size_left > BLOCK_SIZE) size_left = size_left - BLOCK_SIZE;
+        requiredNumberOfBlocks++;
+        if (sizeLeft <= BLOCK_SIZE) break;
+        if (sizeLeft > BLOCK_SIZE) sizeLeft = sizeLeft - BLOCK_SIZE;
     }
-    return req;
+    return requiredNumberOfBlocks;
 }
 
-unsigned int getBlockOffset(unsigned int num_inode, unsigned int inode_num)
+unsigned int getBlockOffset(unsigned int inodeNumber, unsigned int inodeQuantity)
 {
-    return sizeof(struct FileSystemData) + sizeof(struct inode) * inode_num + BLOCK_SIZE * num_inode;
+    return sizeof(struct FileSystemData) + sizeof(struct inode) * inodeQuantity + BLOCK_SIZE * inodeNumber;
 }
 
 
@@ -364,24 +428,25 @@ void listFiles(struct FileSystem* myFileSystem)
     int i = 0, j,k;
     int n_node = -1;
     size_t size = 0;
-    int *which_blocks = malloc(sizeof(int) * myFileSystem->inode_num);
+    int *which_blocks = malloc(sizeof(int) * myFileSystem->inodeQuantity);
     printf("=================================================================\n");
     printf("%-32s%-12s%s\n","File Name","Size","Used Blocks ID");
-    for (i = 0; i < myFileSystem->inode_num; i++)
+    printf("_________________________________________________________________\n");
+    for (i = 0; i < myFileSystem->inodeQuantity; i++)
     {
-        if (myFileSystem->inodesList[i].flag == usedFirst)
+        if (myFileSystem->inodesList[i].inodeStatus == usedStart)
         {
             printf("%-32s", myFileSystem->inodesList[i].name);
             j = 0;
             which_blocks[j] = i;
-            n_node = myFileSystem->inodesList[i].next_inode;
+            n_node = myFileSystem->inodesList[i].nextInode;
             size = size + myFileSystem->inodesList[i].size;
             while (n_node != -1)
             {
                 j++;
                 which_blocks[j] = n_node;
                 size = size + myFileSystem->inodesList[n_node].size;
-                n_node = myFileSystem->inodesList[n_node].next_inode;
+                n_node = myFileSystem->inodesList[n_node].nextInode;
             }
             printf("%-12zu", size);
             for (k = 0; k <= j; k++) printf("%d ", which_blocks[k]);
@@ -395,45 +460,40 @@ void listFiles(struct FileSystem* myFileSystem)
 
 
 
-void diskStatistics(struct FileSystem* v)
+void fileSystemStatistics(struct FileSystem* ourFileSystem)
 {
     size_t memory_wasted = 0;
     int i = 0,j,k;
-    int n_inodes=v->inode_num;
-    printf("=================================================================\n");
-    printf("*FileSystem Data:\n");
-    printf("Size                  : %zu \n", v->fileSystemData.size);
-    printf("Data Size             : %zu\n", sizeof(struct FileSystemData) + sizeof(struct inode) * v->inode_num);
-    printf("Block Size            : %d\n", BLOCK_SIZE);
-    printf("Free                  : %zu \n", v->fileSystemData.freeSize);
-    printf("Files                 : %d \n", v->fileSystemData.fileNumber);
-    for (i = 0; i < v->inode_num; i++)
+    int n_inodes=ourFileSystem->inodeQuantity;
+    printf("============================================================================\n");
+    printf("File System Data Synopsis:  \n");
+    printf("Size:                       %zu \n", ourFileSystem->fileSystemData.size);
+    printf("Data Size:                  %zu\n", sizeof(struct FileSystemData) + sizeof(struct inode) * ourFileSystem->inodeQuantity);
+    printf("Block Size:                 %d\n", BLOCK_SIZE);
+    printf("Free:                       %zu \n", ourFileSystem->fileSystemData.freeSize);
+    printf("Files:                      %d \n", ourFileSystem->fileSystemData.fileNumber);
+    printf("\n");
+    printf("File names:\n");
+
+    for (i = 0; i < ourFileSystem->inodeQuantity; i++)
     {
-        if (v->inodesList[i].flag == usedFirst)
+        if (ourFileSystem->inodesList[i].inodeStatus == usedStart)
         {
-            j = v->inodesList[i].next_inode;
-            k = i;
-            while (j != -1)
-            {
-                k = j;
-                j = v->inodesList[j].next_inode;
-            }
-            memory_wasted = memory_wasted + (BLOCK_SIZE - v->inodesList[k].size);
+            printf("%-32s\n", ourFileSystem->inodesList[i].name);
         }
     }
-    printf("External Fragmentation: %zu\n", v->fileSystemData.size - (v->inode_num * (BLOCK_SIZE + sizeof(struct inode)) + sizeof(struct FileSystemData)) );
-    printf("Internal Fragmentation: %zu\n", memory_wasted);
+    printf("\n");
     printf("Block Usage:\n");
-    printf("E - Empty | F - First & In Use | U - In use\n");
-    for (i = 0; i < v->inode_num; i++)
+    printf("E - Empty Memory Block | S - Start Block & In Use | N - Next Block & In use\n");
+    for (i = 0; i < ourFileSystem->inodeQuantity; i++)
     {
-        printf("%3d:", i);
-        if (v->inodesList[i].flag == usedFirst) printf("F | ");
-        else if (v->inodesList[i].flag == usedNext) printf("U | ");
+        printf("%2d:", i);
+        if (ourFileSystem->inodesList[i].inodeStatus == usedStart) printf("S | ");
+        else if (ourFileSystem->inodesList[i].inodeStatus == usedNext) printf("N | ");
         else printf("E | ");
-        if ((i+1)%15==0 && i+1<v->inode_num) printf("\n");
+        if ((i+1)%11==0 && i+1 < ourFileSystem->inodeQuantity) printf("\n");
     }
     printf("\n");
-    printf("=================================================================\n");
+    printf("============================================================================\n");
 }
 

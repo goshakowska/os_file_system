@@ -18,10 +18,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/stat.h>
 #include "FileSystem.h"
 /*Wyswietlenie listy komend*/
 void help(char *command)
@@ -55,7 +51,7 @@ int main(int argc, char * argv[])
             case 'm':
             {
                 v = openFileSystem();
-                uploadFileToFileSystem(v, argv[2]);
+                copyFileToFileSystem(v, argv[2]);
                 break;
             }
             case 'v':
@@ -63,7 +59,7 @@ int main(int argc, char * argv[])
                 if (argc>2)
                 {
                     v = openFileSystem();
-                    copyFileFromVFS(v, argv[2], argv[3]);
+                    copyFileFromFileSystem(v, argv[2], argv[3]);
                 }
                 else printf("Brak nazwy pliku.\n");
                 break;
@@ -77,18 +73,18 @@ int main(int argc, char * argv[])
             case 's':
             {
                 v = openFileSystem();
-                diskStatistics(v);
+                fileSystemStatistics(v);
                 break;
             }
             case 'd':
             {
-                destroyVFS();
+                deleteFileSystem();
                 break;
             }
             case 'r':
             {
                 v = openFileSystem();
-                removeFileFromVFS(v, argv[2]);
+                deleteFileFromFileSystem(v, argv[2]);
                 break;
             }
             default:
