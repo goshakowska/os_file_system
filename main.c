@@ -41,28 +41,28 @@ void help(char *command)
 
 int main(int argc, char * argv[])
 {
-    struct VFS* v;
+    struct FileSystem* v;
     if (argc<2) help(argv[0]);
     else {
         switch (argv[1][0])
         {
             case 'c':
             {
-                v = CreateVFS(atoi(argv[2]));
+                v = createFileSystem(atoi(argv[2]));
 
                 break;
             }
             case 'm':
             {
-                v = openVFS();
-                addFileToVFS(v, argv[2]);
+                v = openFileSystem();
+                uploadFileToFileSystem(v, argv[2]);
                 break;
             }
             case 'v':
             {
                 if (argc>2)
                 {
-                    v = openVFS();
+                    v = openFileSystem();
                     copyFileFromVFS(v, argv[2], argv[3]);
                 }
                 else printf("Brak nazwy pliku.\n");
@@ -70,13 +70,13 @@ int main(int argc, char * argv[])
             }
             case 'l':
             {
-                v = openVFS();
-                ls(v);
+                v = openFileSystem();
+                listFiles(v);
                 break;
             }
             case 's':
             {
-                v = openVFS();
+                v = openFileSystem();
                 diskStatistics(v);
                 break;
             }
@@ -87,7 +87,7 @@ int main(int argc, char * argv[])
             }
             case 'r':
             {
-                v = openVFS();
+                v = openFileSystem();
                 removeFileFromVFS(v, argv[2]);
                 break;
             }

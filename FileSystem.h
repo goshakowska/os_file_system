@@ -7,47 +7,47 @@
 
 #pragma once
 #include <stdio.h>
-#define BLOCK 1024
-#define FILENAME 32
+#define BLOCK_SIZE 1024
+#define FILENAME_SIZE 32
 
-
-/*Virtual Disk Data*/
-struct superblock {
+struct FileSystemData {
     size_t size;
-    size_t free_size;
-    unsigned int file_number;
+    size_t freeSize;
+    unsigned int fileNumber;
 };
 
 /*Block data*/
-enum flag_type { FREE, USED, FIRST };
+enum memoryBlockType { available, usedNext, usedFirst };
+
+
 struct inode {
     unsigned int flag;
     size_t size;
-    char name[FILENAME];
+    char name[FILENAME_SIZE];
     int next_inode;
 };
 /*Only using when program is running*/
-struct VFS {
-    struct superblock SB;
-    FILE * FP;
-    struct inode * inode_list;
+struct FileSystem {
+    struct FileSystemData fileSystemData;
+    FILE * file;
+    struct inode * inodesList;
     int inode_num;
 };
 
 /* Function needed */
-struct VFS* CreateVFS(size_t);  /* Creates Virtual Disk */
-void addFileToVFS(struct VFS*, const char*);  /*Add File to Virtual Disk */
-void copyFileFromVFS(struct VFS*, const char*, const char*);  /* Copy file from Virtual Disk to minix disk */
-void removeFileFromVFS(struct VFS*, const char*);  /* Remove file from Virtual Disk */
+struct FileSystem* createFileSystem(size_t chosenFileSystemSize);  /* Creates Virtual Disk */
+void uploadFileToFileSystem(struct FileSystem* ourFileSystem, const char* fileName);  /*Add File to Virtual Disk */
+void copyFileFromVFS(struct FileSystem* myFileSystem, const char*, const char* fileToExport);  /* Copy file from Virtual Disk to minix disk */
+void removeFileFromVFS(struct FileSystem* myFileSystem, const char* fileToDelete);  /* Remove file from Virtual Disk */
 void destroyVFS();  /* Delete virtual disk */
-void ls(struct VFS*);  /* !Shows file */
-void diskStatistics(struct VFS*);  /*  !Shows virtual disk statistics */
+void listFiles(struct FileSystem* myFileSystem);  /* !Shows file */
+void diskStatistics(struct FileSystem* myFileSystem);  /*  !Shows virtual disk statistics */
 
 /*Help function*/
-struct VFS* openVFS();  /* Open virtual disk */
-void closeAndSaveVFS(struct VFS*);  /* Close Virtual disk */
-unsigned int get_number_inodes(size_t);  /*Gets how manny inodes and blocks we can allocate*/
-void closeWithoutSaving(struct VFS*);  /**/
+struct FileSystem* openFileSystem();  /* Open virtual disk */
+void saveChangesAndCloseFileSystem(struct FileSystem* ourFileSystem);  /* Close Virtual disk */
+unsigned int calculateNumberOfInodes(size_t fileSystemSize);  /*Gets how manny inodes and blocks we can allocate*/
+void closeWithoutSaving(struct FileSystem* ourFileSystem);  /**/
 unsigned int getReqInodes(size_t);  /**/
 unsigned int getBlockOffset(unsigned int, unsigned int); /**/
 
