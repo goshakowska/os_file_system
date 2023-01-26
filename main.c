@@ -30,8 +30,8 @@ void help(char *command)
     printf("Uzycie:%s <komenda> ", command);
     printf("Lista komend: \n");
     printf("c [rozmiar w bajtach]- Utworzenie wirtualnego dysku\n");
-    printf("m [nazwa_pliku]      - przeniesienie pliku na wirutalny dysk\n");
-    printf("v [nazwa_pliku]      - przeniesienie pliku z wirutalnego dysku\n");
+    printf("m [nazwa_pliku]      - przeniesienie pliku na wirtualny dysk\n");
+    printf("v [nazwa_pliku]      - przeniesienie pliku z wirtualnego dysku\n");
     printf("l - wyswietlenie listy plikow\n");
     printf("s - wyswietlenie statystyki dysku\n");
     printf("d - usuniecie dysku\n");

@@ -16,7 +16,6 @@ struct superblock {
     size_t size;
     size_t free_size;
     unsigned int file_number;
-// unsigned int first_file; /*Number of inode thats points to the first file*/
 };
 
 /*Block data*/
